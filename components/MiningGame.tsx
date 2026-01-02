@@ -756,14 +756,16 @@ const MiningGame: React.FC<MiningGameProps> = ({
         window.removeEventListener('keydown', handleDigInput);
         cancelAnimationFrame(gameLoopRef.current);
     };
-  }, [gameState, progress.currentLevelIndex, localStamina]); // Added localStamina to dependency to ensure check works
+  }, [gameState, progress.currentLevelIndex, localStamina]);
 
-  // Robust Input Handlers for Touch/Mouse
-  const handleInputStart = (code: string) => {
+  // Robust Input Handlers using Pointer Events for Mobile
+  const handlePointerDown = (e: React.PointerEvent, code: string) => {
+      e.preventDefault(); // Prevent default touch actions
+      e.currentTarget.setPointerCapture(e.pointerId); // Capture pointer events
       keysRef.current[code] = true;
       setActiveBtn(code);
+      
       if (code === 'KeyA') startDig();
-      // Trigger jump immediately on press if grounded
       if (code === 'Space' && playerRef.current.grounded) {
           playerRef.current.vy = JUMP_FORCE;
           playerRef.current.grounded = false;
@@ -771,7 +773,9 @@ const MiningGame: React.FC<MiningGameProps> = ({
       }
   };
 
-  const handleInputEnd = (code: string) => {
+  const handlePointerUp = (e: React.PointerEvent, code: string) => {
+      e.preventDefault();
+      e.currentTarget.releasePointerCapture(e.pointerId);
       keysRef.current[code] = false;
       setActiveBtn(null);
   };
@@ -786,13 +790,11 @@ const MiningGame: React.FC<MiningGameProps> = ({
 
             <button 
                 className={`absolute top-1/3 left-0 w-1/3 h-1/3 bg-[#333] hover:bg-[#444] active:bg-[#222] rounded-l-md flex items-center justify-center touch-none transition-all ${activeBtn === 'ArrowLeft' ? 'translate-y-[2px] shadow-none' : 'shadow-[0_4px_0_#111]'}`}
-                style={{ WebkitTapHighlightColor: 'transparent', WebkitUserSelect: 'none', userSelect: 'none' }}
-                onTouchStart={(e) => { e.preventDefault(); handleInputStart('ArrowLeft'); }}
-                onTouchEnd={(e) => { e.preventDefault(); handleInputEnd('ArrowLeft'); }}
-                onTouchCancel={(e) => { e.preventDefault(); handleInputEnd('ArrowLeft'); }}
-                onMouseDown={(e) => { e.preventDefault(); handleInputStart('ArrowLeft'); }}
-                onMouseUp={(e) => { e.preventDefault(); handleInputEnd('ArrowLeft'); }}
-                onMouseLeave={(e) => { e.preventDefault(); handleInputEnd('ArrowLeft'); }}
+                style={{ WebkitTapHighlightColor: 'transparent', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'none' }}
+                onPointerDown={(e) => handlePointerDown(e, 'ArrowLeft')}
+                onPointerUp={(e) => handlePointerUp(e, 'ArrowLeft')}
+                onPointerCancel={(e) => handlePointerUp(e, 'ArrowLeft')}
+                onPointerLeave={(e) => handlePointerUp(e, 'ArrowLeft')}
                 onContextMenu={(e) => e.preventDefault()}
             >
                 <span className="border-t-[10px] border-r-[15px] border-b-[10px] border-transparent border-r-gray-500/50 -ml-1 pointer-events-none"></span>
@@ -800,13 +802,11 @@ const MiningGame: React.FC<MiningGameProps> = ({
 
             <button 
                 className={`absolute top-1/3 right-0 w-1/3 h-1/3 bg-[#333] hover:bg-[#444] active:bg-[#222] rounded-r-md flex items-center justify-center touch-none transition-all ${activeBtn === 'ArrowRight' ? 'translate-y-[2px] shadow-none' : 'shadow-[0_4px_0_#111]'}`}
-                style={{ WebkitTapHighlightColor: 'transparent', WebkitUserSelect: 'none', userSelect: 'none' }}
-                onTouchStart={(e) => { e.preventDefault(); handleInputStart('ArrowRight'); }}
-                onTouchEnd={(e) => { e.preventDefault(); handleInputEnd('ArrowRight'); }}
-                onTouchCancel={(e) => { e.preventDefault(); handleInputEnd('ArrowRight'); }}
-                onMouseDown={(e) => { e.preventDefault(); handleInputStart('ArrowRight'); }}
-                onMouseUp={(e) => { e.preventDefault(); handleInputEnd('ArrowRight'); }}
-                onMouseLeave={(e) => { e.preventDefault(); handleInputEnd('ArrowRight'); }}
+                style={{ WebkitTapHighlightColor: 'transparent', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'none' }}
+                onPointerDown={(e) => handlePointerDown(e, 'ArrowRight')}
+                onPointerUp={(e) => handlePointerUp(e, 'ArrowRight')}
+                onPointerCancel={(e) => handlePointerUp(e, 'ArrowRight')}
+                onPointerLeave={(e) => handlePointerUp(e, 'ArrowRight')}
                 onContextMenu={(e) => e.preventDefault()}
             >
                 <span className="border-t-[10px] border-l-[15px] border-b-[10px] border-transparent border-l-gray-500/50 -mr-1 pointer-events-none"></span>
@@ -825,13 +825,11 @@ const MiningGame: React.FC<MiningGameProps> = ({
             <div className="absolute top-0 right-2 flex flex-col items-center">
                 <button 
                 className={`w-14 h-14 md:w-16 md:h-16 rounded-full bg-purple-600 border-purple-800 touch-none transition-all flex items-center justify-center select-none ${activeBtn === 'KeyA' ? 'translate-y-[4px] border-b-0' : 'border-b-4 shadow-lg'}`}
-                style={{ WebkitTapHighlightColor: 'transparent', WebkitUserSelect: 'none', userSelect: 'none' }}
-                onTouchStart={(e) => { e.preventDefault(); handleInputStart('KeyA'); }}
-                onTouchEnd={(e) => { e.preventDefault(); handleInputEnd('KeyA'); }}
-                onTouchCancel={(e) => { e.preventDefault(); handleInputEnd('KeyA'); }}
-                onMouseDown={(e) => { e.preventDefault(); handleInputStart('KeyA'); }}
-                onMouseUp={(e) => { e.preventDefault(); handleInputEnd('KeyA'); }}
-                onMouseLeave={(e) => { e.preventDefault(); handleInputEnd('KeyA'); }}
+                style={{ WebkitTapHighlightColor: 'transparent', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'none' }}
+                onPointerDown={(e) => handlePointerDown(e, 'KeyA')}
+                onPointerUp={(e) => handlePointerUp(e, 'KeyA')}
+                onPointerCancel={(e) => handlePointerUp(e, 'KeyA')}
+                onPointerLeave={(e) => handlePointerUp(e, 'KeyA')}
                 onContextMenu={(e) => e.preventDefault()}
                 >
                 <Zap size={24} className="text-purple-200 pointer-events-none" />
@@ -842,13 +840,11 @@ const MiningGame: React.FC<MiningGameProps> = ({
             <div className="absolute bottom-4 left-2 flex flex-col items-center">
                 <button 
                 className={`w-14 h-14 md:w-16 md:h-16 rounded-full bg-purple-600 border-purple-800 touch-none transition-all flex items-center justify-center select-none ${activeBtn === 'Space' ? 'translate-y-[4px] border-b-0' : 'border-b-4 shadow-lg'}`}
-                style={{ WebkitTapHighlightColor: 'transparent', WebkitUserSelect: 'none', userSelect: 'none' }}
-                onTouchStart={(e) => { e.preventDefault(); handleInputStart('Space'); }}
-                onTouchEnd={(e) => { e.preventDefault(); handleInputEnd('Space'); }}
-                onTouchCancel={(e) => { e.preventDefault(); handleInputEnd('Space'); }}
-                onMouseDown={(e) => { e.preventDefault(); handleInputStart('Space'); }}
-                onMouseUp={(e) => { e.preventDefault(); handleInputEnd('Space'); }}
-                onMouseLeave={(e) => { e.preventDefault(); handleInputEnd('Space'); }}
+                style={{ WebkitTapHighlightColor: 'transparent', WebkitUserSelect: 'none', userSelect: 'none', touchAction: 'none' }}
+                onPointerDown={(e) => handlePointerDown(e, 'Space')}
+                onPointerUp={(e) => handlePointerUp(e, 'Space')}
+                onPointerCancel={(e) => handlePointerUp(e, 'Space')}
+                onPointerLeave={(e) => handlePointerUp(e, 'Space')}
                 onContextMenu={(e) => e.preventDefault()}
                 >
                 <ArrowUp size={28} className="text-purple-200 pointer-events-none" />
