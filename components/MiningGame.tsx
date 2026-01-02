@@ -359,6 +359,7 @@ const MiningGame: React.FC<MiningGameProps> = ({
       const keys = keysRef.current;
 
       // INSTANT STOP LOGIC: If no key pressed, set vx to 0 immediately
+      // This relies on keysRef being accurately updated by touch/mouse events
       if (keys['ArrowRight']) { 
           p.vx = SPEED; 
           p.facingRight = true; 
@@ -374,6 +375,7 @@ const MiningGame: React.FC<MiningGameProps> = ({
           if (p.grounded && p.action !== 'DIG') p.action = 'IDLE';
       }
 
+      // Jump Logic
       if (keys['Space'] && p.grounded) {
           p.vy = JUMP_FORCE;
           p.grounded = false;
@@ -462,18 +464,20 @@ const MiningGame: React.FC<MiningGameProps> = ({
     };
   }, [gameState, progress.currentLevelIndex]); // Re-bind if level changes
 
-  // Touch Handlers for Virtual Controls
-  const handleTouchStart = (code: string) => {
+  // Robust Input Handlers for Touch/Mouse
+  const handleInputStart = (code: string) => {
       keysRef.current[code] = true;
       setActiveBtn(code);
-      if (code === 'KeyA') startDig(); // Immediate trigger for Dig
+      if (code === 'KeyA') startDig();
+      // Trigger jump immediately on press if grounded
       if (code === 'Space' && playerRef.current.grounded) {
           playerRef.current.vy = JUMP_FORCE;
           playerRef.current.grounded = false;
           playerRef.current.action = 'JUMP';
       }
   };
-  const handleTouchEnd = (code: string) => {
+
+  const handleInputEnd = (code: string) => {
       keysRef.current[code] = false;
       setActiveBtn(null);
   };
@@ -799,22 +803,26 @@ const MiningGame: React.FC<MiningGameProps> = ({
 
             <button 
                 className={`absolute top-1/3 left-0 w-1/3 h-1/3 bg-[#333] hover:bg-[#444] active:bg-[#222] rounded-l-md flex items-center justify-center touch-none transition-all ${activeBtn === 'ArrowLeft' ? 'translate-y-[2px] shadow-none' : 'shadow-[0_4px_0_#111]'}`}
-                onTouchStart={() => handleTouchStart('ArrowLeft')}
-                onTouchEnd={() => handleTouchEnd('ArrowLeft')}
-                onMouseDown={() => handleTouchStart('ArrowLeft')}
-                onMouseUp={() => handleTouchEnd('ArrowLeft')}
+                onTouchStart={(e) => { e.preventDefault(); handleInputStart('ArrowLeft'); }}
+                onTouchEnd={(e) => { e.preventDefault(); handleInputEnd('ArrowLeft'); }}
+                onTouchCancel={(e) => { e.preventDefault(); handleInputEnd('ArrowLeft'); }}
+                onMouseDown={(e) => { e.preventDefault(); handleInputStart('ArrowLeft'); }}
+                onMouseUp={(e) => { e.preventDefault(); handleInputEnd('ArrowLeft'); }}
+                onMouseLeave={(e) => { e.preventDefault(); handleInputEnd('ArrowLeft'); }}
             >
-                <span className="border-t-[10px] border-r-[15px] border-b-[10px] border-transparent border-r-gray-500/50 -ml-1"></span>
+                <span className="border-t-[10px] border-r-[15px] border-b-[10px] border-transparent border-r-gray-500/50 -ml-1 pointer-events-none"></span>
             </button>
 
             <button 
                 className={`absolute top-1/3 right-0 w-1/3 h-1/3 bg-[#333] hover:bg-[#444] active:bg-[#222] rounded-r-md flex items-center justify-center touch-none transition-all ${activeBtn === 'ArrowRight' ? 'translate-y-[2px] shadow-none' : 'shadow-[0_4px_0_#111]'}`}
-                onTouchStart={() => handleTouchStart('ArrowRight')}
-                onTouchEnd={() => handleTouchEnd('ArrowRight')}
-                onMouseDown={() => handleTouchStart('ArrowRight')}
-                onMouseUp={() => handleTouchEnd('ArrowRight')}
+                onTouchStart={(e) => { e.preventDefault(); handleInputStart('ArrowRight'); }}
+                onTouchEnd={(e) => { e.preventDefault(); handleInputEnd('ArrowRight'); }}
+                onTouchCancel={(e) => { e.preventDefault(); handleInputEnd('ArrowRight'); }}
+                onMouseDown={(e) => { e.preventDefault(); handleInputStart('ArrowRight'); }}
+                onMouseUp={(e) => { e.preventDefault(); handleInputEnd('ArrowRight'); }}
+                onMouseLeave={(e) => { e.preventDefault(); handleInputEnd('ArrowRight'); }}
             >
-                <span className="border-t-[10px] border-l-[15px] border-b-[10px] border-transparent border-l-gray-500/50 -mr-1"></span>
+                <span className="border-t-[10px] border-l-[15px] border-b-[10px] border-transparent border-l-gray-500/50 -mr-1 pointer-events-none"></span>
             </button>
             
             <div className="absolute top-0 left-1/3 w-1/3 h-1/3 bg-[#333] rounded-t-md shadow-[0_4px_0_#111] pointer-events-none"></div>
@@ -829,26 +837,30 @@ const MiningGame: React.FC<MiningGameProps> = ({
         <div className="relative w-32 h-32 md:w-40 md:h-40 rotate-[-15deg]">
             <div className="absolute top-0 right-2 flex flex-col items-center">
                 <button 
-                className={`w-14 h-14 md:w-16 md:h-16 rounded-full bg-purple-600 border-purple-800 touch-none transition-all flex items-center justify-center ${activeBtn === 'KeyA' ? 'translate-y-[4px] border-b-0' : 'border-b-4 shadow-lg'}`}
-                onTouchStart={() => handleTouchStart('KeyA')}
-                onTouchEnd={() => handleTouchEnd('KeyA')}
-                onMouseDown={() => handleTouchStart('KeyA')}
-                onMouseUp={() => handleTouchEnd('KeyA')}
+                className={`w-14 h-14 md:w-16 md:h-16 rounded-full bg-purple-600 border-purple-800 touch-none transition-all flex items-center justify-center select-none ${activeBtn === 'KeyA' ? 'translate-y-[4px] border-b-0' : 'border-b-4 shadow-lg'}`}
+                onTouchStart={(e) => { e.preventDefault(); handleInputStart('KeyA'); }}
+                onTouchEnd={(e) => { e.preventDefault(); handleInputEnd('KeyA'); }}
+                onTouchCancel={(e) => { e.preventDefault(); handleInputEnd('KeyA'); }}
+                onMouseDown={(e) => { e.preventDefault(); handleInputStart('KeyA'); }}
+                onMouseUp={(e) => { e.preventDefault(); handleInputEnd('KeyA'); }}
+                onMouseLeave={(e) => { e.preventDefault(); handleInputEnd('KeyA'); }}
                 >
-                <Zap size={24} className="text-purple-200" />
+                <Zap size={24} className="text-purple-200 pointer-events-none" />
                 </button>
                 <span className="font-pixel text-gray-400 text-xs font-bold mt-1">A</span>
             </div>
 
             <div className="absolute bottom-4 left-2 flex flex-col items-center">
                 <button 
-                className={`w-14 h-14 md:w-16 md:h-16 rounded-full bg-purple-600 border-purple-800 touch-none transition-all flex items-center justify-center ${activeBtn === 'Space' ? 'translate-y-[4px] border-b-0' : 'border-b-4 shadow-lg'}`}
-                onTouchStart={() => handleTouchStart('Space')}
-                onTouchEnd={() => handleTouchEnd('Space')}
-                onMouseDown={() => handleTouchStart('Space')}
-                onMouseUp={() => handleTouchEnd('Space')}
+                className={`w-14 h-14 md:w-16 md:h-16 rounded-full bg-purple-600 border-purple-800 touch-none transition-all flex items-center justify-center select-none ${activeBtn === 'Space' ? 'translate-y-[4px] border-b-0' : 'border-b-4 shadow-lg'}`}
+                onTouchStart={(e) => { e.preventDefault(); handleInputStart('Space'); }}
+                onTouchEnd={(e) => { e.preventDefault(); handleInputEnd('Space'); }}
+                onTouchCancel={(e) => { e.preventDefault(); handleInputEnd('Space'); }}
+                onMouseDown={(e) => { e.preventDefault(); handleInputStart('Space'); }}
+                onMouseUp={(e) => { e.preventDefault(); handleInputEnd('Space'); }}
+                onMouseLeave={(e) => { e.preventDefault(); handleInputEnd('Space'); }}
                 >
-                <ArrowUp size={28} className="text-purple-200" />
+                <ArrowUp size={28} className="text-purple-200 pointer-events-none" />
                 </button>
                 <span className="font-pixel text-gray-400 text-xs font-bold mt-1">B</span>
             </div>
@@ -870,7 +882,7 @@ const MiningGame: React.FC<MiningGameProps> = ({
 
       {/* Main Console Container */}
       {/* Mobile: Column (Screen Top, Controls Bottom), Desktop: Row (Left, Screen, Right) */}
-      <div className="flex flex-col md:flex-row items-center justify-center w-full h-full p-2 md:p-6 bg-[#2f2f2f] relative">
+      <div className="flex flex-col md:flex-row items-center justify-center w-full h-full p-2 md:p-6 bg-[#2f2f2f] relative select-none">
         
         {/* Desktop Left Controller (Hidden on Mobile) */}
         <div className="hidden md:block">

@@ -512,8 +512,8 @@ const App: React.FC = () => {
         </div>
       </main>
 
-      {/* 3. Bottom Control Bar - Fixed Bottom */}
-      <footer className="bg-white/80 backdrop-blur-md p-3 md:p-4 shadow-[0_-4px_20px_rgba(0,0,0,0.1)] z-30 border-t-4 border-mario-blue overflow-x-auto">
+      {/* 3. Bottom Control Bar - Fixed Bottom with increased padding for mobile */}
+      <footer className="bg-white/80 backdrop-blur-md p-3 pb-8 md:pb-4 shadow-[0_-4px_20px_rgba(0,0,0,0.1)] z-30 border-t-4 border-mario-blue overflow-x-auto">
         <div className="max-w-6xl mx-auto flex flex-nowrap md:flex-wrap items-center justify-start md:justify-center gap-3 md:gap-6 min-w-max md:min-w-0 px-2">
           
           <Button 
