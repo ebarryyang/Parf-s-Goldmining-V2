@@ -363,10 +363,30 @@ const App: React.FC = () => {
     document.body.removeChild(link);
   };
 
+  // Auth Handler with Reset Logic for New Registrations
+  const handleUserAuth = (user: UserProfile, isRegister: boolean = false) => {
+      setCurrentUser(user);
+      if (isRegister) {
+          // Initialize fresh state for new user
+          // Reset Stamina to MAX (5) immediately
+          setStats({ 
+              shovels: 0, 
+              coins: 0, 
+              stamina: MAX_DAILY_STAMINA, 
+              lastStaminaReset: Date.now() 
+          });
+          setBooks([]);
+          setLogs([]);
+          setPets([]);
+          setGameProgress({ currentLevelIndex: 0, levelCoinsFound: 0 });
+          addLog("欢迎来到Parfai的世界！获得初始体力。", {}, 'EARN');
+      }
+  };
+
   // ---------------- Render Logic ----------------
 
   if (!currentUser) {
-      return <AuthScreen onLogin={setCurrentUser} />;
+      return <AuthScreen onLogin={handleUserAuth} />;
   }
 
   const selectedBook = books.find(b => b.id === selectedBookId);

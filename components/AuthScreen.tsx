@@ -9,7 +9,7 @@ import { VALID_INVITE_CODE } from '../constants';
 const DEFAULT_AVATAR = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3QgeD0iMCIgeT0iMCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiBmaWxsPSIjNkI4Q0ZGIi8+PHJlY3QgeD0iMTYiIHk9IjQiIHdpZHRoPSI4IiBoZWlnaHQ9IjI0IiBmaWxsPSIjRkZGRkZGIi8+PHJlY3QgeD0iMjAiIHk9IjgiIHdpZHRoPSI0IiBoZWlnaHQ9IjE2IiBmaWxsPSIjRkZDMENCIi8+PHJlY3QgeD0iNDAiIHk9IjQiIHdpZHRoPSI4IiBoZWlnaHQ9IjI0IiBmaWxsPSIjRkZGRkZGIi8+PHJlY3QgeD0iNDQiIHk9IjgiIHdpZHRoPSI0IiBoZWlnaHQ9IjE2IiBmaWxsPSIjRkZDMENCIi8+PHJlY3QgeD0iMTIiIHk9IjI0IiB3aWR0aD0iNDAiIGhlaWdodD0iMzYiIGZpbGw9IiNGRkZGRkYiLz48cmVjdCB4PSIyMCIgeT0iMzIiIHdpZHRoPSI4IiBoZWlnaHQ9IjgiIGZpbGw9IiMwMDAwMDAiLz48cmVjdCB4PSIzNiIgeT0iMzIiIHdpZHRoPSI4IiBoZWlnaHQ9IjgiIGZpbGw9IiMwMDAwMDAiLz48cmVjdCB4PSIzMCIgeT0iNDQiIHdpZHRoPSI0IiBoZWlnaHQ9IjQiIGZpbGw9IiNGRkMwQ0IiLz48cmVjdCB4PSIyOCIgeT0iNTIiIHdpZHRoPSI4IiBoZWlnaHQ9IjQiIGZpbGw9IiMwMDAwMDAiLz48L3N2Zz4=";
 
 interface AuthScreenProps {
-  onLogin: (user: UserProfile) => void;
+  onLogin: (user: UserProfile, isRegister?: boolean) => void;
 }
 
 const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
@@ -70,7 +70,8 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
     // Store credentials for "Login" simulation
     localStorage.setItem(`parfai_auth_${username.trim()}`, password.trim());
     
-    onLogin(newUser);
+    // Pass true for isRegister to trigger data reset in App
+    onLogin(newUser, true);
   };
 
   const handleLogin = (e: React.FormEvent) => {
@@ -88,7 +89,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
             isAdmin: true,
             avatar: DEFAULT_AVATAR
         };
-        onLogin(adminUser);
+        onLogin(adminUser, false);
         return;
     }
 
@@ -105,7 +106,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
         };
         // Store auth for future persistence if needed, though this bypasses strict register
         localStorage.setItem(`parfai_auth_yangben`, 'yang128739');
-        onLogin(user);
+        onLogin(user, false);
         return;
     }
 
@@ -121,7 +122,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
                  if (loginCode.trim() === VALID_INVITE_CODE && !u.hasValidCode) {
                      u.hasValidCode = true;
                  }
-                 onLogin(u);
+                 onLogin(u, false);
                  return;
             }
         }
