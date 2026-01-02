@@ -30,6 +30,13 @@ interface Particle {
   life: number; // 0 to 1
 }
 
+interface Cloud {
+    x: number;
+    y: number;
+    w: number;
+    speed: number;
+}
+
 interface RewardInfo {
     name: string;
     icon: string;
@@ -71,8 +78,9 @@ const MiningGame: React.FC<MiningGameProps> = ({
   });
   
   const particlesRef = useRef<Particle[]>([]);
+  const cloudsRef = useRef<Cloud[]>([]);
   const keysRef = useRef<{ [key: string]: boolean }>({});
-  const levelMapRef = useRef<{x: number, y: number, w: number, h: number, type: 'ground' | 'platform' | 'obstacle' | 'wall' | 'npc', npcType?: string, animOffset?: number}[]>([]);
+  const levelMapRef = useRef<{x: number, y: number, w: number, h: number, type: 'ground' | 'platform' | 'obstacle' | 'wall' | 'npc', npcType?: string, animOffset?: number, decoration?: string}[]>([]);
   const cameraRef = useRef({ x: 0 });
   const gameLoopRef = useRef<number>(0);
   const globalTimeRef = useRef(0);
@@ -104,6 +112,25 @@ const MiningGame: React.FC<MiningGameProps> = ({
       setLocalCoins(progress.levelCoinsFound);
       generateLevel();
   }, [progress.currentLevelIndex]);
+
+  // Generate Clouds
+  useEffect(() => {
+      const isSpace = currentLevelData.theme === 'space' || currentLevelData.theme === 'mars';
+      if (!isSpace) {
+          const clouds: Cloud[] = [];
+          for(let i=0; i<10; i++) {
+              clouds.push({
+                  x: Math.random() * 2000,
+                  y: Math.random() * 300,
+                  w: 60 + Math.random() * 80,
+                  speed: 0.2 + Math.random() * 0.3
+              });
+          }
+          cloudsRef.current = clouds;
+      } else {
+          cloudsRef.current = [];
+      }
+  }, [currentLevelData]);
 
   // Helper to spawn particles
   const spawnParticles = (x: number, y: number, count: number, colors: string[]) => {
@@ -140,16 +167,41 @@ const MiningGame: React.FC<MiningGameProps> = ({
       return 'slime'; // Generic
   };
 
+  // Helper to get Plants/Decoration type based on theme
+  const getThemePlant = (theme: string) => {
+      const rand = Math.random();
+      if (theme === 'desert' || theme === 'egypt' || theme === 'canyon' || theme === 'ancient') return rand < 0.5 ? 'cactus' : 'dry_bush';
+      if (theme === 'snow') return 'pine_tree';
+      if (theme === 'beach' || theme === 'island' || theme === 'coast') return 'palm_tree';
+      if (theme === 'field') return 'lavender';
+      if (theme === 'jungle' || theme === 'forest' || theme === 'grassland') return rand < 0.3 ? 'flower' : (rand < 0.6 ? 'grass' : 'bush');
+      if (theme === 'city') return rand < 0.5 ? 'trash_can' : 'hydrant'; // Urban "plants"
+      return null;
+  };
+
   // Procedural Level Generation - ENDLESS STYLE
   const generateLevel = useCallback(() => {
     const map: typeof levelMapRef.current = [];
     const groundY = 500;
     // Make level massive so player can keep walking until 800 coins
     const levelLength = 50000; 
+    const theme = currentLevelData.theme || 'grassland';
 
-    // 1. Continuous Floor
+    // 1. Continuous Floor with Decorations
     for (let x = -500; x < levelLength + 500; x += TILE_SIZE) {
-        map.push({ x, y: groundY, w: TILE_SIZE, h: TILE_SIZE, type: 'ground' });
+        const block: any = { x, y: groundY, w: TILE_SIZE, h: TILE_SIZE, type: 'ground' };
+        
+        // Add random decoration (plant) on top of ground blocks
+        // Space/Mars usually has rocks instead of plants, but handled via getThemePlant returning null or specific
+        if (Math.random() < 0.25) {
+            const plantType = getThemePlant(theme);
+            if (plantType) {
+                block.decoration = plantType;
+            } else if (theme === 'space' || theme === 'mars') {
+                 if (Math.random() < 0.1) block.decoration = 'rock';
+            }
+        }
+        map.push(block);
     }
 
     // 2. Platforms & Obstacles / NPCs
@@ -166,12 +218,12 @@ const MiningGame: React.FC<MiningGameProps> = ({
              
              // Item on platform
              if (Math.random() < 0.3) {
-                 const npcType = getThemeNPC(currentLevelData.theme || '');
+                 const npcType = getThemeNPC(theme);
                  map.push({ x: x + w/2 - 20, y: groundY - h - 40, w: 40, h: 40, type: 'npc', npcType, animOffset: Math.random() * 100 });
              }
         } else {
              // Ground NPC/Obstacle
-             const npcType = getThemeNPC(currentLevelData.theme || '');
+             const npcType = getThemeNPC(theme);
              let w = 40, h = 40;
              if (npcType === 'camel') { w = 60; h = 50; }
              if (npcType === 'car') { w = 70; h = 35; }
@@ -337,6 +389,14 @@ const MiningGame: React.FC<MiningGameProps> = ({
           p.life -= 0.03;
       });
       particlesRef.current = particlesRef.current.filter(p => p.life > 0);
+
+      // Update Clouds
+      cloudsRef.current.forEach(c => {
+          c.x -= c.speed;
+          if (c.x + c.w < cameraRef.current.x - 100) {
+              c.x = cameraRef.current.x + 900; // Reset ahead of camera
+          }
+      });
 
       // Don't update player physics while showing reward modal
       if (gameState === 'REWARD') return;
@@ -575,6 +635,20 @@ const MiningGame: React.FC<MiningGameProps> = ({
       const parallaxX = (camX * 0.4) % width;
       
       ctx.save();
+      
+      // Draw Clouds (Slow Parallax)
+      if (cloudsRef.current.length > 0) {
+          ctx.save();
+          // Clouds move independently of camera mostly, but we add slight parallax
+          cloudsRef.current.forEach(c => {
+             ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
+             ctx.beginPath();
+             ctx.ellipse(c.x - (camX * 0.1), c.y, c.w, c.w * 0.6, 0, 0, Math.PI*2);
+             ctx.fill();
+          });
+          ctx.restore();
+      }
+
       ctx.translate(-parallaxX, 0);
 
       // Simple geometric shapes for rich backgrounds
@@ -726,6 +800,68 @@ const MiningGame: React.FC<MiningGameProps> = ({
     ctx.restore();
   };
 
+  const drawPlant = (ctx: CanvasRenderingContext2D, x: number, y: number, type: string) => {
+     ctx.save();
+     ctx.translate(x, y);
+     if (type === 'cactus') {
+         ctx.fillStyle = "#2E8B57";
+         ctx.fillRect(15, -40, 10, 40); // trunk
+         ctx.fillRect(5, -30, 10, 10); // left arm
+         ctx.fillRect(5, -40, 5, 10);
+         ctx.fillRect(25, -25, 10, 10); // right arm
+         ctx.fillRect(30, -35, 5, 10);
+     }
+     else if (type === 'pine_tree') {
+         ctx.fillStyle = "#8B4513";
+         ctx.fillRect(18, -10, 4, 10); // trunk
+         ctx.fillStyle = "#006400";
+         ctx.beginPath(); ctx.moveTo(0, -10); ctx.lineTo(40, -10); ctx.lineTo(20, -40); ctx.fill(); // bottom
+         ctx.beginPath(); ctx.moveTo(5, -25); ctx.lineTo(35, -25); ctx.lineTo(20, -50); ctx.fill(); // mid
+     }
+     else if (type === 'palm_tree') {
+         ctx.fillStyle = "#8B4513";
+         ctx.fillRect(18, -40, 4, 40); // trunk
+         ctx.fillStyle = "#32CD32";
+         ctx.beginPath();
+         ctx.moveTo(20, -40); ctx.bezierCurveTo(0, -50, 0, -30, 10, -30); ctx.fill();
+         ctx.beginPath();
+         ctx.moveTo(20, -40); ctx.bezierCurveTo(40, -50, 40, -30, 30, -30); ctx.fill();
+         ctx.beginPath();
+         ctx.moveTo(20, -40); ctx.bezierCurveTo(10, -60, 30, -60, 20, -40); ctx.fill();
+     }
+     else if (type === 'grass') {
+         ctx.fillStyle = "#32CD32";
+         ctx.fillRect(5, -10, 2, 10);
+         ctx.fillRect(10, -15, 2, 15);
+         ctx.fillRect(15, -8, 2, 8);
+         ctx.fillRect(25, -12, 2, 12);
+     }
+     else if (type === 'flower') {
+         ctx.fillStyle = "#228B22";
+         ctx.fillRect(19, -15, 2, 15);
+         ctx.fillStyle = "#FF69B4";
+         ctx.beginPath(); ctx.arc(20, -15, 5, 0, Math.PI*2); ctx.fill();
+         ctx.fillStyle = "yellow";
+         ctx.beginPath(); ctx.arc(20, -15, 2, 0, Math.PI*2); ctx.fill();
+     }
+     else if (type === 'dry_bush') {
+         ctx.fillStyle = "#CD853F";
+         ctx.beginPath(); ctx.arc(20, -5, 10, 0, Math.PI*2); ctx.fill();
+         ctx.beginPath(); ctx.arc(10, -5, 8, 0, Math.PI*2); ctx.fill();
+         ctx.beginPath(); ctx.arc(30, -5, 8, 0, Math.PI*2); ctx.fill();
+     }
+     else if (type === 'rock') {
+         ctx.fillStyle = "#696969";
+         ctx.beginPath(); ctx.arc(20, 0, 10, 0, Math.PI, true); ctx.fill();
+     }
+     else if (type === 'trash_can') {
+         ctx.fillStyle = "#708090";
+         ctx.fillRect(10, -20, 20, 20);
+         ctx.fillRect(8, -22, 24, 2);
+     }
+     ctx.restore();
+  };
+
   const draw = () => {
       const canvas = canvasRef.current;
       if (!canvas) return;
@@ -759,6 +895,11 @@ const MiningGame: React.FC<MiningGameProps> = ({
               if (block.type === 'ground' && (currentLevelData.theme === 'grassland' || currentLevelData.theme === 'city' || currentLevelData.theme === 'jungle')) {
                   ctx.fillStyle = "#228B22";
                   ctx.fillRect(block.x, block.y, block.w, 8);
+              }
+
+              // Draw Decoration if present
+              if (block.decoration) {
+                  drawPlant(ctx, block.x, block.y, block.decoration);
               }
 
           } else if (block.type === 'npc') {
@@ -795,7 +936,7 @@ const MiningGame: React.FC<MiningGameProps> = ({
 
   /* Left Controller Component */
   const DPad = () => (
-    <div className="w-24 md:w-32 h-full flex flex-col justify-center items-center shrink-0 mr-2 md:mr-4">
+    <div className="w-24 md:w-32 h-full flex flex-col justify-center items-center shrink-0 mr-2 md:mr-4 select-none" onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}>
         <div className="relative w-32 h-32 md:w-40 md:h-40">
             <div className="absolute top-1/3 left-0 w-full h-1/3 bg-[#1a1a1a] rounded-sm shadow-inner"></div>
             <div className="absolute top-0 left-1/3 w-1/3 h-full bg-[#1a1a1a] rounded-sm shadow-inner"></div>
@@ -803,24 +944,28 @@ const MiningGame: React.FC<MiningGameProps> = ({
 
             <button 
                 className={`absolute top-1/3 left-0 w-1/3 h-1/3 bg-[#333] hover:bg-[#444] active:bg-[#222] rounded-l-md flex items-center justify-center touch-none transition-all ${activeBtn === 'ArrowLeft' ? 'translate-y-[2px] shadow-none' : 'shadow-[0_4px_0_#111]'}`}
+                style={{ WebkitTapHighlightColor: 'transparent' }}
                 onTouchStart={(e) => { e.preventDefault(); handleInputStart('ArrowLeft'); }}
                 onTouchEnd={(e) => { e.preventDefault(); handleInputEnd('ArrowLeft'); }}
                 onTouchCancel={(e) => { e.preventDefault(); handleInputEnd('ArrowLeft'); }}
                 onMouseDown={(e) => { e.preventDefault(); handleInputStart('ArrowLeft'); }}
                 onMouseUp={(e) => { e.preventDefault(); handleInputEnd('ArrowLeft'); }}
                 onMouseLeave={(e) => { e.preventDefault(); handleInputEnd('ArrowLeft'); }}
+                onContextMenu={(e) => e.preventDefault()}
             >
                 <span className="border-t-[10px] border-r-[15px] border-b-[10px] border-transparent border-r-gray-500/50 -ml-1 pointer-events-none"></span>
             </button>
 
             <button 
                 className={`absolute top-1/3 right-0 w-1/3 h-1/3 bg-[#333] hover:bg-[#444] active:bg-[#222] rounded-r-md flex items-center justify-center touch-none transition-all ${activeBtn === 'ArrowRight' ? 'translate-y-[2px] shadow-none' : 'shadow-[0_4px_0_#111]'}`}
+                style={{ WebkitTapHighlightColor: 'transparent' }}
                 onTouchStart={(e) => { e.preventDefault(); handleInputStart('ArrowRight'); }}
                 onTouchEnd={(e) => { e.preventDefault(); handleInputEnd('ArrowRight'); }}
                 onTouchCancel={(e) => { e.preventDefault(); handleInputEnd('ArrowRight'); }}
                 onMouseDown={(e) => { e.preventDefault(); handleInputStart('ArrowRight'); }}
                 onMouseUp={(e) => { e.preventDefault(); handleInputEnd('ArrowRight'); }}
                 onMouseLeave={(e) => { e.preventDefault(); handleInputEnd('ArrowRight'); }}
+                onContextMenu={(e) => e.preventDefault()}
             >
                 <span className="border-t-[10px] border-l-[15px] border-b-[10px] border-transparent border-l-gray-500/50 -mr-1 pointer-events-none"></span>
             </button>
@@ -833,17 +978,19 @@ const MiningGame: React.FC<MiningGameProps> = ({
 
   /* Right Controller Component */
   const ActionButtons = () => (
-    <div className="w-24 md:w-32 h-full flex flex-col justify-center items-center shrink-0 ml-2 md:ml-4 relative">
+    <div className="w-24 md:w-32 h-full flex flex-col justify-center items-center shrink-0 ml-2 md:ml-4 relative select-none" onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}>
         <div className="relative w-32 h-32 md:w-40 md:h-40 rotate-[-15deg]">
             <div className="absolute top-0 right-2 flex flex-col items-center">
                 <button 
                 className={`w-14 h-14 md:w-16 md:h-16 rounded-full bg-purple-600 border-purple-800 touch-none transition-all flex items-center justify-center select-none ${activeBtn === 'KeyA' ? 'translate-y-[4px] border-b-0' : 'border-b-4 shadow-lg'}`}
+                style={{ WebkitTapHighlightColor: 'transparent' }}
                 onTouchStart={(e) => { e.preventDefault(); handleInputStart('KeyA'); }}
                 onTouchEnd={(e) => { e.preventDefault(); handleInputEnd('KeyA'); }}
                 onTouchCancel={(e) => { e.preventDefault(); handleInputEnd('KeyA'); }}
                 onMouseDown={(e) => { e.preventDefault(); handleInputStart('KeyA'); }}
                 onMouseUp={(e) => { e.preventDefault(); handleInputEnd('KeyA'); }}
                 onMouseLeave={(e) => { e.preventDefault(); handleInputEnd('KeyA'); }}
+                onContextMenu={(e) => e.preventDefault()}
                 >
                 <Zap size={24} className="text-purple-200 pointer-events-none" />
                 </button>
@@ -853,12 +1000,14 @@ const MiningGame: React.FC<MiningGameProps> = ({
             <div className="absolute bottom-4 left-2 flex flex-col items-center">
                 <button 
                 className={`w-14 h-14 md:w-16 md:h-16 rounded-full bg-purple-600 border-purple-800 touch-none transition-all flex items-center justify-center select-none ${activeBtn === 'Space' ? 'translate-y-[4px] border-b-0' : 'border-b-4 shadow-lg'}`}
+                style={{ WebkitTapHighlightColor: 'transparent' }}
                 onTouchStart={(e) => { e.preventDefault(); handleInputStart('Space'); }}
                 onTouchEnd={(e) => { e.preventDefault(); handleInputEnd('Space'); }}
                 onTouchCancel={(e) => { e.preventDefault(); handleInputEnd('Space'); }}
                 onMouseDown={(e) => { e.preventDefault(); handleInputStart('Space'); }}
                 onMouseUp={(e) => { e.preventDefault(); handleInputEnd('Space'); }}
                 onMouseLeave={(e) => { e.preventDefault(); handleInputEnd('Space'); }}
+                onContextMenu={(e) => e.preventDefault()}
                 >
                 <ArrowUp size={28} className="text-purple-200 pointer-events-none" />
                 </button>

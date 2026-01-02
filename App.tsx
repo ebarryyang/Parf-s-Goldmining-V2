@@ -465,47 +465,53 @@ const App: React.FC = () => {
 
             {/* Right: Stats & Info */}
             <section className="w-full md:w-1/3 flex flex-col gap-4">
-            {/* Stats Card */}
-            <div className="bg-[#3E2723] rounded-[1.5rem] p-4 md:p-6 shadow-pixel-lg text-white relative flex flex-row md:flex-col border-4 border-[#FFECB3] gap-4 items-center md:items-stretch">
+            {/* Stats Card - Modified Layout for Mobile */}
+            <div className="bg-[#3E2723] rounded-[1.5rem] p-4 md:p-6 shadow-pixel-lg text-white relative flex flex-col gap-4 border-4 border-[#FFECB3]">
                 {/* Decorative Rivets */}
                 <div className="absolute top-2 left-2 w-2 h-2 rounded-full bg-[#FFECB3] shadow-inner hidden md:block"></div>
                 <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[#FFECB3] shadow-inner hidden md:block"></div>
 
-                <div className="flex-1 md:mb-2">
-                    <div className="flex justify-between items-center mb-1 px-1">
-                    <span className="text-[#FFECB3] font-pixel text-[10px] md:text-xs tracking-wider">我的铲子</span>
+                {/* Shovels and Coins Row */}
+                <div className="flex flex-row w-full gap-4">
+                    <div className="flex-1">
+                        <div className="flex justify-between items-center mb-1 px-1">
+                        <span className="text-[#FFECB3] font-pixel text-[10px] md:text-xs tracking-wider">我的铲子</span>
+                        </div>
+                        <div className="bg-black/30 rounded-xl p-2 md:p-4 flex items-center justify-between gap-2 border-2 border-[#5D4037] shadow-inner h-full">
+                        <Shovel className="text-mario-blue w-6 h-6 md:w-8 md:h-8" />
+                        <span className="text-2xl md:text-4xl font-pixel text-white drop-shadow-md">x {stats.shovels}</span>
+                        </div>
                     </div>
-                    <div className="bg-black/30 rounded-xl p-2 md:p-4 flex items-center justify-between gap-2 border-2 border-[#5D4037] shadow-inner">
-                    <Shovel className="text-mario-blue w-6 h-6 md:w-8 md:h-8" />
-                    <span className="text-2xl md:text-4xl font-pixel text-white drop-shadow-md">x {stats.shovels}</span>
-                    </div>
-                </div>
 
-                <div className="flex-1 md:mb-2">
-                    <div className="flex justify-between items-center mb-1 px-1">
-                    <span className="text-[#FFECB3] font-pixel text-[10px] md:text-xs tracking-wider">金币数量</span>
-                    </div>
-                    <div className="bg-black/30 rounded-xl p-2 md:p-4 flex flex-col border-2 border-[#5D4037] shadow-inner gap-1 md:gap-3">
-                    <div className="flex items-center justify-between">
-                        <Coins className="text-mario-yellow animate-pulse w-6 h-6 md:w-8 md:h-8" />
-                        <span className="text-2xl md:text-4xl font-pixel text-mario-yellow drop-shadow-md">x {stats.coins}</span>
-                    </div>
-                    <button 
-                        onClick={() => setActiveModal('WITHDRAW')}
-                        className="bg-mario-yellow text-mario-brown text-[10px] md:text-xs font-bold py-1 md:py-2 rounded-lg hover:bg-yellow-400 active:translate-y-0.5 border-2 border-black/10 flex items-center justify-center gap-1 transition-all"
-                    >
-                        <CreditCard size={12} />
-                        提取
-                    </button>
+                    <div className="flex-1">
+                        <div className="flex justify-between items-center mb-1 px-1">
+                        <span className="text-[#FFECB3] font-pixel text-[10px] md:text-xs tracking-wider">金币数量</span>
+                        </div>
+                        <div className="bg-black/30 rounded-xl p-2 md:p-4 flex flex-col border-2 border-[#5D4037] shadow-inner gap-1 md:gap-3">
+                        <div className="flex items-center justify-between">
+                            <Coins className="text-mario-yellow animate-pulse w-6 h-6 md:w-8 md:h-8" />
+                            <span className="text-2xl md:text-4xl font-pixel text-mario-yellow drop-shadow-md">x {stats.coins}</span>
+                        </div>
+                        <button 
+                            onClick={() => setActiveModal('WITHDRAW')}
+                            className="bg-mario-yellow text-mario-brown text-[10px] md:text-xs font-bold py-1 md:py-2 rounded-lg hover:bg-yellow-400 active:translate-y-0.5 border-2 border-black/10 flex items-center justify-center gap-1 transition-all"
+                        >
+                            <CreditCard size={12} />
+                            提取
+                        </button>
+                        </div>
                     </div>
                 </div>
                 
+                {/* Logs Button Row - Visible on Mobile and Desktop */}
                 <button 
                     onClick={() => setActiveModal('LOGS')}
-                    className="hidden md:flex mt-auto bg-[#5D4037] hover:bg-[#6D4C41] text-[#FFECB3] py-3 rounded-xl font-bold items-center justify-center gap-2 border-2 border-[#8D6E63] shadow-pixel active:shadow-none active:translate-y-1 transition-all"
+                    className="flex w-full bg-[#5D4037] hover:bg-[#6D4C41] text-[#FFECB3] py-3 rounded-xl font-bold items-center justify-center gap-2 border-2 border-[#8D6E63] shadow-pixel active:shadow-none active:translate-y-1 transition-all"
                 >
-                    <ScrollText size={18} />
-                    查看记录
+                    <span className="block md:hidden">查看记录</span>
+                    <span className="hidden md:flex items-center gap-2">
+                        <ScrollText size={18} /> 查看记录
+                    </span>
                 </button>
             </div>
             </section>
