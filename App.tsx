@@ -373,7 +373,8 @@ const App: React.FC = () => {
   const isLocked = isTrialExpired();
 
   return (
-    <div className="h-screen w-full flex flex-col font-round selection:bg-mario-red selection:text-white relative z-10 overflow-hidden">
+    // Use dynamic viewport height (dvh) for better mobile support
+    <div className="h-[100dvh] w-full flex flex-col font-round selection:bg-mario-red selection:text-white relative z-10 overflow-hidden">
       
       {/* 1. Header Area - Fixed Top with Style */}
       <header className="bg-white/80 backdrop-blur-md p-3 md:p-4 shadow-sm z-30 border-b-4 border-mario-blue relative">
@@ -547,8 +548,8 @@ const App: React.FC = () => {
         </div>
       </main>
 
-      {/* 3. Bottom Control Bar - Fixed Bottom with increased padding for mobile */}
-      <footer className="bg-white/80 backdrop-blur-md p-3 pb-8 md:pb-4 shadow-[0_-4px_20px_rgba(0,0,0,0.1)] z-30 border-t-4 border-mario-blue overflow-x-auto">
+      {/* 3. Bottom Control Bar - Fixed Bottom with safe area padding */}
+      <footer className="bg-white/80 backdrop-blur-md p-3 pb-[calc(2rem+env(safe-area-inset-bottom))] md:pb-4 shadow-[0_-4px_20px_rgba(0,0,0,0.1)] z-30 border-t-4 border-mario-blue overflow-x-auto">
         <div className="max-w-6xl mx-auto flex flex-nowrap md:flex-wrap items-center justify-start md:justify-center gap-3 md:gap-6 min-w-max md:min-w-0 px-2">
           
           <Button 
@@ -593,14 +594,24 @@ const App: React.FC = () => {
                 />
              </>
           ) : (
-             <Button 
-                onClick={() => setActiveModal('INVITATION')}
-                label={currentUser.hasValidCode ? "已激活" : "邀请码"}
-                variant={currentUser.hasValidCode ? "neutral" : "secondary"}
-                icon={<Key size={18} />}
-                className="w-auto px-4"
-                disabled={currentUser.hasValidCode}
-            />
+             <>
+                <Button 
+                    onClick={() => setActiveModal('INVITATION')}
+                    label={currentUser.hasValidCode ? "已激活" : "邀请码"}
+                    variant={currentUser.hasValidCode ? "neutral" : "secondary"}
+                    icon={<Key size={18} />}
+                    className="w-auto px-4"
+                    disabled={currentUser.hasValidCode}
+                />
+                {/* Download Button added for regular users */}
+                <Button 
+                    onClick={handleDownloadUserRecords}
+                    label="下载记录"
+                    variant="neutral"
+                    icon={<FileSpreadsheet size={18} />}
+                    className="w-auto px-4"
+                />
+             </>
           )}
 
           {!currentUser.isAdmin && (

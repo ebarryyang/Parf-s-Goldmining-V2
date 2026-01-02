@@ -511,57 +511,6 @@ const MiningGame: React.FC<MiningGameProps> = ({
       if (cameraRef.current.x < 0) cameraRef.current.x = 0;
   };
 
-  // Game Loop & Input Listener
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => { 
-        keysRef.current[e.code] = true; 
-        setActiveBtn(e.code);
-    };
-    const handleKeyUp = (e: KeyboardEvent) => { 
-        keysRef.current[e.code] = false; 
-        setActiveBtn(null);
-    };
-    const handleDigInput = (e: KeyboardEvent) => {
-        if (e.code === 'KeyA') startDig();
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-    window.addEventListener('keydown', handleDigInput);
-
-    const loop = () => {
-        update();
-        draw();
-        gameLoopRef.current = requestAnimationFrame(loop);
-    };
-    gameLoopRef.current = requestAnimationFrame(loop);
-
-    return () => {
-        window.removeEventListener('keydown', handleKeyDown);
-        window.removeEventListener('keyup', handleKeyUp);
-        window.removeEventListener('keydown', handleDigInput);
-        cancelAnimationFrame(gameLoopRef.current);
-    };
-  }, [gameState, progress.currentLevelIndex, localStamina]); // Added localStamina to dependency to ensure check works
-
-  // Robust Input Handlers for Touch/Mouse
-  const handleInputStart = (code: string) => {
-      keysRef.current[code] = true;
-      setActiveBtn(code);
-      if (code === 'KeyA') startDig();
-      // Trigger jump immediately on press if grounded
-      if (code === 'Space' && playerRef.current.grounded) {
-          playerRef.current.vy = JUMP_FORCE;
-          playerRef.current.grounded = false;
-          playerRef.current.action = 'JUMP';
-      }
-  };
-
-  const handleInputEnd = (code: string) => {
-      keysRef.current[code] = false;
-      setActiveBtn(null);
-  };
-
   // 3D Rabbit Drawing Function
   const draw3DRabbit = (ctx: CanvasRenderingContext2D, x: number, y: number, facingRight: boolean, frame: number, action: string, digTimer: number) => {
     ctx.save();
@@ -650,313 +599,186 @@ const MiningGame: React.FC<MiningGameProps> = ({
     ctx.restore();
   };
 
-  const drawScenery = (ctx: CanvasRenderingContext2D, width: number, height: number, camX: number) => {
-      const theme = currentLevelData.theme || 'grassland';
-      const parallaxX = (camX * 0.4) % width;
-      
+  const drawDecoration = (ctx: CanvasRenderingContext2D, type: string, x: number, y: number) => {
       ctx.save();
-      
-      // Draw Clouds (Slow Parallax)
-      if (cloudsRef.current.length > 0) {
-          ctx.save();
-          // Clouds move independently of camera mostly, but we add slight parallax
-          cloudsRef.current.forEach(c => {
-             ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
-             ctx.beginPath();
-             ctx.ellipse(c.x - (camX * 0.1), c.y, c.w, c.w * 0.6, 0, 0, Math.PI*2);
-             ctx.fill();
-          });
-          ctx.restore();
+      ctx.translate(x, y);
+      if (type === 'cactus') {
+          ctx.fillStyle = "#2E8B57";
+          ctx.fillRect(-6, -30, 12, 30);
+          ctx.fillRect(-14, -22, 8, 8);
+          ctx.fillRect(6, -26, 8, 8);
+      } else if (type === 'flower') {
+          ctx.fillStyle = "green"; ctx.fillRect(-2, -10, 4, 10);
+          ctx.fillStyle = "pink"; ctx.beginPath(); ctx.arc(0, -12, 6, 0, Math.PI*2); ctx.fill();
+          ctx.fillStyle = "yellow"; ctx.beginPath(); ctx.arc(0, -12, 2, 0, Math.PI*2); ctx.fill();
+      } else if (type === 'rock') {
+          ctx.fillStyle = "#888";
+          ctx.beginPath(); ctx.arc(0, 0, 8, 0, Math.PI, true); ctx.fill();
+      } else if (type === 'grass') {
+          ctx.fillStyle = "#32CD32";
+          ctx.beginPath(); ctx.moveTo(-5,0); ctx.lineTo(-2,-10); ctx.lineTo(0,0); ctx.lineTo(2,-8); ctx.lineTo(5,0); ctx.fill();
       }
-
-      ctx.translate(-parallaxX, 0);
-
-      // Simple geometric shapes for rich backgrounds
-      if (theme === 'desert' || theme === 'egypt') {
-          // Pyramids
-          ctx.fillStyle = "rgba(230, 194, 136, 0.6)";
-          for(let i=0; i<3; i++) {
-              const x = i * 400 + 100;
-              ctx.beginPath();
-              ctx.moveTo(x, height - 100);
-              ctx.lineTo(x + 150, height - 350);
-              ctx.lineTo(x + 300, height - 100);
-              ctx.fill();
-          }
-      } 
-      else if (theme === 'city') {
-          // Skyscrapers
-          ctx.fillStyle = "rgba(100, 100, 110, 0.5)";
-          for(let i=0; i<6; i++) {
-              const h = 200 + Math.random() * 200;
-              ctx.fillRect(i * 200, height - 100 - h, 100 + Math.random()*50, h);
-              // Windows
-              ctx.fillStyle = "rgba(255, 255, 200, 0.3)";
-              for(let w=0; w<4; w++) {
-                  for(let r=0; r<10; r++) {
-                      ctx.fillRect(i*200 + 10 + w*20, height - 100 - h + 10 + r*30, 10, 20);
-                  }
-              }
-              ctx.fillStyle = "rgba(100, 100, 110, 0.5)"; // Reset
-          }
-      }
-      else if (theme === 'forest' || theme === 'grassland' || theme === 'jungle') {
-          // Trees
-          for(let i=0; i<8; i++) {
-              const x = i * 180;
-              // Trunk
-              ctx.fillStyle = "#5D4037";
-              ctx.fillRect(x + 50, height - 250, 20, 150);
-              // Leaves
-              ctx.fillStyle = theme === 'jungle' ? "#006400" : "#228B22";
-              ctx.beginPath();
-              ctx.arc(x + 60, height - 280, 50, 0, Math.PI*2);
-              ctx.fill();
-              ctx.beginPath();
-              ctx.arc(x + 30, height - 260, 40, 0, Math.PI*2);
-              ctx.fill();
-              ctx.beginPath();
-              ctx.arc(x + 90, height - 260, 40, 0, Math.PI*2);
-              ctx.fill();
-          }
-      }
-      else if (theme === 'snow') {
-          // Mountains
-          ctx.fillStyle = "#E0E0E0";
-          for(let i=0; i<4; i++) {
-              const x = i * 350;
-              ctx.beginPath();
-              ctx.moveTo(x, height - 100);
-              ctx.lineTo(x + 200, height - 400);
-              ctx.lineTo(x + 400, height - 100);
-              ctx.fill();
-              // Snow cap
-              ctx.fillStyle = "#FFFFFF";
-              ctx.beginPath();
-              ctx.moveTo(x + 150, height - 325);
-              ctx.lineTo(x + 200, height - 400);
-              ctx.lineTo(x + 250, height - 325);
-              ctx.fill();
-              ctx.fillStyle = "#E0E0E0"; // Reset
-          }
-      }
-      else if (theme === 'space' || theme === 'mars') {
-          // Planets
-          ctx.fillStyle = "rgba(200, 200, 200, 0.4)";
-          ctx.beginPath(); ctx.arc(200, 200, 60, 0, Math.PI*2); ctx.fill();
-           // Rings
-          ctx.strokeStyle = "rgba(200, 200, 200, 0.3)"; ctx.lineWidth = 5;
-          ctx.beginPath(); ctx.ellipse(200, 200, 90, 20, 0.4, 0, Math.PI*2); ctx.stroke();
-          
-          ctx.fillStyle = theme === 'mars' ? "#8B0000" : "#4B0082";
-          ctx.beginPath(); ctx.arc(600, 300, 40, 0, Math.PI*2); ctx.fill();
-      }
-
       ctx.restore();
   };
 
-  const drawBackground = (ctx: CanvasRenderingContext2D, width: number, height: number, camX: number) => {
-    // Sky Gradient
-    const skyGrad = ctx.createLinearGradient(0, 0, 0, height);
-    if (currentLevelData.theme === 'space' || currentLevelData.theme === 'mars') {
-        skyGrad.addColorStop(0, '#000000');
-        skyGrad.addColorStop(1, currentLevelData.bg);
-    } else {
-        skyGrad.addColorStop(0, '#87CEEB'); 
-        skyGrad.addColorStop(0.5, currentLevelData.bg); 
-        skyGrad.addColorStop(1, '#FFFFFF'); 
-    }
-    ctx.fillStyle = skyGrad;
-    ctx.fillRect(0, 0, width, height);
-    
-    // Sun/Moon
-    const isSpace = currentLevelData.theme === 'space' || currentLevelData.theme === 'mars';
-    ctx.save();
-    ctx.shadowBlur = 20;
-    ctx.shadowColor = isSpace ? "white" : "yellow";
-    ctx.fillStyle = isSpace ? "#F0F0F0" : "#FDB813";
-    ctx.beginPath();
-    ctx.arc(width - 100, 100, 40, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
+  const drawNPC = (ctx: CanvasRenderingContext2D, type: string, x: number, y: number, w: number, h: number, offset: number) => {
+      ctx.save();
+      ctx.translate(x + w/2, y + h/2);
+      
+      const bounce = Math.sin((globalTimeRef.current + offset) * 0.1) * 3;
+      ctx.translate(0, bounce);
 
-    // Distant Stars/Parallax
-    if (isSpace) {
-        ctx.save();
-        ctx.fillStyle = "rgba(255,255,255,0.8)";
-        for(let i=0; i<50; i++) {
-             ctx.fillRect(Math.random()*width, Math.random()*height, Math.random()*2, Math.random()*2);
-        }
-        ctx.restore();
-    }
-
-    // Rich Scenery Elements
-    drawScenery(ctx, width, height, camX);
-  };
-
-  const drawNPC = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, type: string, animOffset: number) => {
-    const t = globalTimeRef.current + animOffset;
-    const bounce = Math.sin(t * 0.1) * 3;
-    const sway = Math.cos(t * 0.05) * 2;
-
-    ctx.fillStyle = "rgba(0,0,0,0.2)";
-    ctx.beginPath();
-    ctx.ellipse(x + w/2, y + h - 2, w/2, 5, 0, 0, Math.PI*2);
-    ctx.fill();
-
-    ctx.save();
-    ctx.translate(0, bounce * (type === 'alien' || type === 'spaceship' ? 2 : 0.5)); 
-    
-    ctx.fillStyle = "#FF69B4";
-    ctx.beginPath();
-    ctx.arc(x + w/2, y + h/2, w/3 + Math.sin(t*0.2)*2, 0, Math.PI*2);
-    ctx.fill();
-    ctx.fillStyle = "white";
-    ctx.beginPath();
-    ctx.arc(x + w/2 - 5 + sway, y + h/2 - 5, 4, 0, Math.PI*2);
-    ctx.arc(x + w/2 + 5 + sway, y + h/2 - 5, 4, 0, Math.PI*2);
-    ctx.fill();
-    
-    ctx.restore();
-  };
-
-  const drawPlant = (ctx: CanvasRenderingContext2D, x: number, y: number, type: string) => {
-     ctx.save();
-     ctx.translate(x, y);
-     if (type === 'cactus') {
-         ctx.fillStyle = "#2E8B57";
-         ctx.fillRect(15, -40, 10, 40); // trunk
-         ctx.fillRect(5, -30, 10, 10); // left arm
-         ctx.fillRect(5, -40, 5, 10);
-         ctx.fillRect(25, -25, 10, 10); // right arm
-         ctx.fillRect(30, -35, 5, 10);
-     }
-     else if (type === 'pine_tree') {
-         ctx.fillStyle = "#8B4513";
-         ctx.fillRect(18, -10, 4, 10); // trunk
-         ctx.fillStyle = "#006400";
-         ctx.beginPath(); ctx.moveTo(0, -10); ctx.lineTo(40, -10); ctx.lineTo(20, -40); ctx.fill(); // bottom
-         ctx.beginPath(); ctx.moveTo(5, -25); ctx.lineTo(35, -25); ctx.lineTo(20, -50); ctx.fill(); // mid
-     }
-     else if (type === 'palm_tree') {
-         ctx.fillStyle = "#8B4513";
-         ctx.fillRect(18, -40, 4, 40); // trunk
-         ctx.fillStyle = "#32CD32";
-         ctx.beginPath();
-         ctx.moveTo(20, -40); ctx.bezierCurveTo(0, -50, 0, -30, 10, -30); ctx.fill();
-         ctx.beginPath();
-         ctx.moveTo(20, -40); ctx.bezierCurveTo(40, -50, 40, -30, 30, -30); ctx.fill();
-         ctx.beginPath();
-         ctx.moveTo(20, -40); ctx.bezierCurveTo(10, -60, 30, -60, 20, -40); ctx.fill();
-     }
-     else if (type === 'grass') {
-         ctx.fillStyle = "#32CD32";
-         ctx.fillRect(5, -10, 2, 10);
-         ctx.fillRect(10, -15, 2, 15);
-         ctx.fillRect(15, -8, 2, 8);
-         ctx.fillRect(25, -12, 2, 12);
-     }
-     else if (type === 'flower') {
-         ctx.fillStyle = "#228B22";
-         ctx.fillRect(19, -15, 2, 15);
-         ctx.fillStyle = "#FF69B4";
-         ctx.beginPath(); ctx.arc(20, -15, 5, 0, Math.PI*2); ctx.fill();
-         ctx.fillStyle = "yellow";
-         ctx.beginPath(); ctx.arc(20, -15, 2, 0, Math.PI*2); ctx.fill();
-     }
-     else if (type === 'dry_bush') {
-         ctx.fillStyle = "#CD853F";
-         ctx.beginPath(); ctx.arc(20, -5, 10, 0, Math.PI*2); ctx.fill();
-         ctx.beginPath(); ctx.arc(10, -5, 8, 0, Math.PI*2); ctx.fill();
-         ctx.beginPath(); ctx.arc(30, -5, 8, 0, Math.PI*2); ctx.fill();
-     }
-     else if (type === 'rock') {
-         ctx.fillStyle = "#696969";
-         ctx.beginPath(); ctx.arc(20, 0, 10, 0, Math.PI, true); ctx.fill();
-     }
-     else if (type === 'trash_can') {
-         ctx.fillStyle = "#708090";
-         ctx.fillRect(10, -20, 20, 20);
-         ctx.fillRect(8, -22, 24, 2);
-     }
-     ctx.restore();
+      if (type === 'slime') {
+          ctx.fillStyle = "#00FA9A";
+          ctx.beginPath(); ctx.arc(0, 0, 15, Math.PI, 0); ctx.lineTo(15, 10); ctx.lineTo(-15, 10); ctx.fill();
+          ctx.fillStyle = "black"; ctx.beginPath(); ctx.arc(-5, -2, 2, 0, Math.PI*2); ctx.arc(5, -2, 2, 0, Math.PI*2); ctx.fill();
+      } else if (type === 'ghost') {
+          ctx.fillStyle = "white";
+          ctx.beginPath(); ctx.arc(0, -5, 15, Math.PI, 0); ctx.lineTo(15, 15); ctx.lineTo(-15, 15); ctx.fill();
+          ctx.fillStyle = "black"; ctx.beginPath(); ctx.arc(-5, -2, 2, 0, Math.PI*2); ctx.arc(5, -2, 2, 0, Math.PI*2); ctx.fill();
+      } else {
+          // Generic Box for others
+          ctx.fillStyle = "#FF6347";
+          ctx.fillRect(-w/2 + 5, -h/2 + 5, w - 10, h - 10);
+          ctx.fillStyle = "white";
+          ctx.fillRect(-10, -5, 5, 5); ctx.fillRect(5, -5, 5, 5);
+      }
+      ctx.restore();
   };
 
   const draw = () => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
 
-      const width = canvas.width;
-      const height = canvas.height;
-      const camX = cameraRef.current.x;
+    // Clear
+    ctx.imageSmoothingEnabled = false;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      drawBackground(ctx, width, height, camX);
+    // Sky
+    const bg = currentLevelData.bg || '#87CEEB';
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      ctx.save();
-      ctx.translate(-camX, 0);
+    // Clouds
+    ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
+    cloudsRef.current.forEach(c => {
+        ctx.beginPath();
+        ctx.ellipse(c.x - cameraRef.current.x, c.y, c.w / 2, c.w / 3, 0, 0, Math.PI * 2);
+        ctx.fill();
+    });
 
-      levelMapRef.current.forEach(block => {
-          if (block.type === 'ground' || block.type === 'platform') {
-              const groundGrad = ctx.createLinearGradient(block.x, block.y, block.x, block.y + block.h);
-              groundGrad.addColorStop(0, currentLevelData.ground);
-              groundGrad.addColorStop(1, '#5D4037'); 
-              
-              ctx.fillStyle = groundGrad;
-              ctx.fillRect(block.x, block.y, block.w, block.h);
-              
-              ctx.fillStyle = "rgba(255,255,255,0.2)";
-              ctx.fillRect(block.x, block.y, block.w, 4); 
+    // Map
+    const cx = cameraRef.current.x;
+    levelMapRef.current.forEach(block => {
+        if (block.x - cx > canvas.width || block.x + block.w - cx < 0) return; // Culling
 
-              ctx.strokeStyle = "rgba(0,0,0,0.1)";
-              ctx.strokeRect(block.x, block.y, block.w, block.h);
+        // Draw Block
+        if (block.type === 'ground' || block.type === 'platform') {
+             // Theme colors
+             ctx.fillStyle = currentLevelData.ground || '#228B22';
+             ctx.fillRect(block.x - cx, block.y, block.w, block.h);
+             
+             // Top Highlight
+             ctx.fillStyle = "rgba(255,255,255,0.2)";
+             ctx.fillRect(block.x - cx, block.y, block.w, 4);
+             
+             // Decoration
+             if (block.decoration) {
+                 drawDecoration(ctx, block.decoration, block.x - cx + block.w/2, block.y);
+             }
+        } 
+        else if (block.type === 'npc') {
+            drawNPC(ctx, block.npcType || 'slime', block.x - cx, block.y, block.w, block.h, block.animOffset || 0);
+        }
+        else if (block.type === 'wall') {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(block.x - cx, block.y, block.w, block.h);
+        }
+    });
 
-              if (block.type === 'ground' && (currentLevelData.theme === 'grassland' || currentLevelData.theme === 'city' || currentLevelData.theme === 'jungle')) {
-                  ctx.fillStyle = "#228B22";
-                  ctx.fillRect(block.x, block.y, block.w, 8);
-              }
+    // Player
+    const p = playerRef.current;
+    // Shadow
+    ctx.fillStyle = "rgba(0,0,0,0.2)";
+    ctx.beginPath();
+    ctx.ellipse(p.x - cx + 16, p.y + 40, 12, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
 
-              // Draw Decoration if present
-              if (block.decoration) {
-                  drawPlant(ctx, block.x, block.y, block.decoration);
-              }
+    draw3DRabbit(ctx, p.x - cx, p.y, p.facingRight, p.animFrame, p.action, p.digTimer);
 
-          } else if (block.type === 'npc') {
-              drawNPC(ctx, block.x, block.y, block.w, block.h, block.npcType || 'slime', block.animOffset || 0);
-          } else if (block.type === 'obstacle') {
-              ctx.fillStyle = "gray";
-              ctx.fillRect(block.x, block.y, block.w, block.h);
-          }
-      });
+    // Particles
+    particlesRef.current.forEach(pt => {
+        ctx.fillStyle = pt.color;
+        ctx.globalAlpha = pt.life;
+        ctx.beginPath();
+        ctx.arc(pt.x - cx, pt.y, pt.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1.0;
+    });
+    
+    // Scanlines Effect
+    ctx.fillStyle = "rgba(0,0,0,0.1)";
+    for(let i=0; i<canvas.height; i+=4) {
+        ctx.fillRect(0, i, canvas.width, 1);
+    }
+  };
 
-      particlesRef.current.forEach(p => {
-          ctx.fillStyle = p.color;
-          ctx.globalAlpha = p.life;
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-          ctx.fill();
-      });
-      ctx.globalAlpha = 1.0;
+  // Game Loop & Input Listener
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => { 
+        keysRef.current[e.code] = true; 
+        setActiveBtn(e.code);
+    };
+    const handleKeyUp = (e: KeyboardEvent) => { 
+        keysRef.current[e.code] = false; 
+        setActiveBtn(null);
+    };
+    const handleDigInput = (e: KeyboardEvent) => {
+        if (e.code === 'KeyA') startDig();
+    };
 
-      const p = playerRef.current;
-      draw3DRabbit(ctx, p.x, p.y, p.facingRight, p.animFrame, p.action, p.digTimer);
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('keydown', handleDigInput);
 
-      ctx.restore();
+    const loop = () => {
+        update();
+        draw();
+        gameLoopRef.current = requestAnimationFrame(loop);
+    };
+    gameLoopRef.current = requestAnimationFrame(loop);
 
-      if (gameState === 'MSG') {
-          ctx.fillStyle = "rgba(0,0,0,0.7)";
-          ctx.fillRect(0, height/2 - 40, width, 80);
-          ctx.font = "20px 'Press Start 2P'";
-          ctx.fillStyle = msgColor;
-          ctx.textAlign = "center";
-          ctx.fillText(message, width/2, height/2 + 10);
+    return () => {
+        window.removeEventListener('keydown', handleKeyDown);
+        window.removeEventListener('keyup', handleKeyUp);
+        window.removeEventListener('keydown', handleDigInput);
+        cancelAnimationFrame(gameLoopRef.current);
+    };
+  }, [gameState, progress.currentLevelIndex, localStamina]); // Added localStamina to dependency to ensure check works
+
+  // Robust Input Handlers for Touch/Mouse
+  const handleInputStart = (code: string) => {
+      keysRef.current[code] = true;
+      setActiveBtn(code);
+      if (code === 'KeyA') startDig();
+      // Trigger jump immediately on press if grounded
+      if (code === 'Space' && playerRef.current.grounded) {
+          playerRef.current.vy = JUMP_FORCE;
+          playerRef.current.grounded = false;
+          playerRef.current.action = 'JUMP';
       }
+  };
+
+  const handleInputEnd = (code: string) => {
+      keysRef.current[code] = false;
+      setActiveBtn(null);
   };
 
   /* Left Controller Component */
   const DPad = () => (
-    <div className="w-24 md:w-32 h-full flex flex-col justify-center items-center shrink-0 mr-2 md:mr-4 select-none" onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+    <div className="w-24 md:w-32 h-full flex flex-col justify-center items-center shrink-0 mr-2 md:mr-4 select-none touch-none" onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}>
         <div className="relative w-32 h-32 md:w-40 md:h-40">
             <div className="absolute top-1/3 left-0 w-full h-1/3 bg-[#1a1a1a] rounded-sm shadow-inner"></div>
             <div className="absolute top-0 left-1/3 w-1/3 h-full bg-[#1a1a1a] rounded-sm shadow-inner"></div>
@@ -964,7 +786,7 @@ const MiningGame: React.FC<MiningGameProps> = ({
 
             <button 
                 className={`absolute top-1/3 left-0 w-1/3 h-1/3 bg-[#333] hover:bg-[#444] active:bg-[#222] rounded-l-md flex items-center justify-center touch-none transition-all ${activeBtn === 'ArrowLeft' ? 'translate-y-[2px] shadow-none' : 'shadow-[0_4px_0_#111]'}`}
-                style={{ WebkitTapHighlightColor: 'transparent' }}
+                style={{ WebkitTapHighlightColor: 'transparent', WebkitUserSelect: 'none', userSelect: 'none' }}
                 onTouchStart={(e) => { e.preventDefault(); handleInputStart('ArrowLeft'); }}
                 onTouchEnd={(e) => { e.preventDefault(); handleInputEnd('ArrowLeft'); }}
                 onTouchCancel={(e) => { e.preventDefault(); handleInputEnd('ArrowLeft'); }}
@@ -978,7 +800,7 @@ const MiningGame: React.FC<MiningGameProps> = ({
 
             <button 
                 className={`absolute top-1/3 right-0 w-1/3 h-1/3 bg-[#333] hover:bg-[#444] active:bg-[#222] rounded-r-md flex items-center justify-center touch-none transition-all ${activeBtn === 'ArrowRight' ? 'translate-y-[2px] shadow-none' : 'shadow-[0_4px_0_#111]'}`}
-                style={{ WebkitTapHighlightColor: 'transparent' }}
+                style={{ WebkitTapHighlightColor: 'transparent', WebkitUserSelect: 'none', userSelect: 'none' }}
                 onTouchStart={(e) => { e.preventDefault(); handleInputStart('ArrowRight'); }}
                 onTouchEnd={(e) => { e.preventDefault(); handleInputEnd('ArrowRight'); }}
                 onTouchCancel={(e) => { e.preventDefault(); handleInputEnd('ArrowRight'); }}
@@ -998,12 +820,12 @@ const MiningGame: React.FC<MiningGameProps> = ({
 
   /* Right Controller Component */
   const ActionButtons = () => (
-    <div className="w-24 md:w-32 h-full flex flex-col justify-center items-center shrink-0 ml-2 md:ml-4 relative select-none" onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+    <div className="w-24 md:w-32 h-full flex flex-col justify-center items-center shrink-0 ml-2 md:ml-4 relative select-none touch-none" onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}>
         <div className="relative w-32 h-32 md:w-40 md:h-40 rotate-[-15deg]">
             <div className="absolute top-0 right-2 flex flex-col items-center">
                 <button 
                 className={`w-14 h-14 md:w-16 md:h-16 rounded-full bg-purple-600 border-purple-800 touch-none transition-all flex items-center justify-center select-none ${activeBtn === 'KeyA' ? 'translate-y-[4px] border-b-0' : 'border-b-4 shadow-lg'}`}
-                style={{ WebkitTapHighlightColor: 'transparent' }}
+                style={{ WebkitTapHighlightColor: 'transparent', WebkitUserSelect: 'none', userSelect: 'none' }}
                 onTouchStart={(e) => { e.preventDefault(); handleInputStart('KeyA'); }}
                 onTouchEnd={(e) => { e.preventDefault(); handleInputEnd('KeyA'); }}
                 onTouchCancel={(e) => { e.preventDefault(); handleInputEnd('KeyA'); }}
@@ -1020,7 +842,7 @@ const MiningGame: React.FC<MiningGameProps> = ({
             <div className="absolute bottom-4 left-2 flex flex-col items-center">
                 <button 
                 className={`w-14 h-14 md:w-16 md:h-16 rounded-full bg-purple-600 border-purple-800 touch-none transition-all flex items-center justify-center select-none ${activeBtn === 'Space' ? 'translate-y-[4px] border-b-0' : 'border-b-4 shadow-lg'}`}
-                style={{ WebkitTapHighlightColor: 'transparent' }}
+                style={{ WebkitTapHighlightColor: 'transparent', WebkitUserSelect: 'none', userSelect: 'none' }}
                 onTouchStart={(e) => { e.preventDefault(); handleInputStart('Space'); }}
                 onTouchEnd={(e) => { e.preventDefault(); handleInputEnd('Space'); }}
                 onTouchCancel={(e) => { e.preventDefault(); handleInputEnd('Space'); }}
@@ -1125,7 +947,7 @@ const MiningGame: React.FC<MiningGameProps> = ({
         </div>
 
         {/* Mobile Controls Row (Visible on Mobile, Hidden on Desktop) */}
-        <div className="flex md:hidden w-full justify-between items-center px-4 pb-2">
+        <div className="flex md:hidden w-full justify-between items-center px-4 pb-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
             <DPad />
             {/* Branding in middle of controller for mobile */}
             <div className="flex-1 text-center font-pixel text-[10px] text-gray-500 opacity-50">
