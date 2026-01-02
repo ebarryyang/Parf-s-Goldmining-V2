@@ -19,6 +19,8 @@ export interface Book {
 export interface UserStats {
   shovels: number;
   coins: number;
+  stamina: number; // New: Daily energy
+  lastStaminaReset: number; // New: Timestamp of last reset
 }
 
 export interface LogEntry {

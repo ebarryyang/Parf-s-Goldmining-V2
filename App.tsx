@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Book, UserStats, ModalType, LogEntry, GameProgress, Pet, UserProfile } from './types';
 import { Plus, Download, Shovel, Coins, BookOpen, ScrollText, Trophy, Gamepad2, CreditCard, FileSpreadsheet, Lock, Key, ShieldCheck, RefreshCw, LogOut } from 'lucide-react';
-import { STORAGE_KEY_BOOKS, STORAGE_KEY_STATS, STORAGE_KEY_LOGS, STORAGE_KEY_PETS, STORAGE_KEY_GAME, STORAGE_KEY_USER, TRIAL_DAYS, STORAGE_KEY_INVITE_CODES } from './constants';
+import { STORAGE_KEY_BOOKS, STORAGE_KEY_STATS, STORAGE_KEY_LOGS, STORAGE_KEY_PETS, STORAGE_KEY_GAME, STORAGE_KEY_USER, TRIAL_DAYS, STORAGE_KEY_INVITE_CODES, MAX_DAILY_STAMINA } from './constants';
 import AddBookModal from './components/AddBookModal';
 import ChapterModal from './components/ChapterModal';
 import MiningGame from './components/MiningGame';
@@ -19,7 +19,7 @@ const App: React.FC = () => {
 
   // Data State
   const [books, setBooks] = useState<Book[]>([]);
-  const [stats, setStats] = useState<UserStats>({ shovels: 0, coins: 0 });
+  const [stats, setStats] = useState<UserStats>({ shovels: 0, coins: 0, stamina: MAX_DAILY_STAMINA, lastStaminaReset: Date.now() });
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [pets, setPets] = useState<Pet[]>([]);
   const [gameProgress, setGameProgress] = useState<GameProgress>({ currentLevelIndex: 0, levelCoinsFound: 0 });
@@ -45,11 +45,39 @@ const App: React.FC = () => {
     
     if (loadedUser) setCurrentUser(JSON.parse(loadedUser));
     if (loadedBooks) setBooks(JSON.parse(loadedBooks));
-    if (loadedStats) setStats(JSON.parse(loadedStats));
+    if (loadedStats) {
+        const parsedStats = JSON.parse(loadedStats);
+        // Ensure new fields exist for legacy data
+        if (parsedStats.stamina === undefined) parsedStats.stamina = MAX_DAILY_STAMINA;
+        if (parsedStats.lastStaminaReset === undefined) parsedStats.lastStaminaReset = Date.now();
+        setStats(parsedStats);
+    }
     if (loadedLogs) setLogs(JSON.parse(loadedLogs));
     if (loadedPets) setPets(JSON.parse(loadedPets));
     if (loadedGame) setGameProgress(JSON.parse(loadedGame));
   }, []);
+
+  // Daily Stamina Reset Logic
+  useEffect(() => {
+      if (!stats.lastStaminaReset) return;
+
+      const lastResetDate = new Date(stats.lastStaminaReset);
+      const now = new Date();
+      
+      const isSameDay = lastResetDate.getFullYear() === now.getFullYear() &&
+                        lastResetDate.getMonth() === now.getMonth() &&
+                        lastResetDate.getDate() === now.getDate();
+
+      if (!isSameDay) {
+          console.log("Resetting daily stamina...");
+          setStats(prev => ({
+              ...prev,
+              stamina: MAX_DAILY_STAMINA,
+              lastStaminaReset: Date.now()
+          }));
+          addLog("每日体力已恢复!", {}, 'EARN');
+      }
+  }, [stats.lastStaminaReset]);
 
   // Save User separately when updated
   useEffect(() => {
@@ -282,6 +310,7 @@ const App: React.FC = () => {
 
     setBooks(prev => prev.filter(b => b.id !== bookId));
     setStats(prev => ({
+        ...prev,
         shovels: Math.max(0, prev.shovels - shovelsToRemove),
         coins: Math.max(0, prev.coins - coinsToRemove)
     }));
@@ -465,8 +494,8 @@ const App: React.FC = () => {
 
             {/* Right: Stats & Info */}
             <section className="w-full md:w-1/3 flex flex-col gap-4">
-            {/* Stats Card - Modified Layout for Mobile */}
-            <div className="bg-[#3E2723] rounded-[1.5rem] p-4 md:p-6 shadow-pixel-lg text-white relative flex flex-col gap-4 border-4 border-[#FFECB3]">
+            {/* Stats Card - Modified Layout for Mobile: Increased vertical gaps and padding bottom */}
+            <div className="bg-[#3E2723] rounded-[1.5rem] p-4 md:p-6 pb-6 md:pb-6 shadow-pixel-lg text-white relative flex flex-col gap-6 md:gap-4 border-4 border-[#FFECB3]">
                 {/* Decorative Rivets */}
                 <div className="absolute top-2 left-2 w-2 h-2 rounded-full bg-[#FFECB3] shadow-inner hidden md:block"></div>
                 <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[#FFECB3] shadow-inner hidden md:block"></div>
@@ -503,7 +532,7 @@ const App: React.FC = () => {
                     </div>
                 </div>
                 
-                {/* Logs Button Row - Visible on Mobile and Desktop */}
+                {/* Logs Button Row - Increased gap-6 above ensures it doesn't overlap */}
                 <button 
                     onClick={() => setActiveModal('LOGS')}
                     className="flex w-full bg-[#5D4037] hover:bg-[#6D4C41] text-[#FFECB3] py-3 rounded-xl font-bold items-center justify-center gap-2 border-2 border-[#8D6E63] shadow-pixel active:shadow-none active:translate-y-1 transition-all"

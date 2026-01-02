@@ -16,6 +16,7 @@ export const TRIAL_DAYS = 5;
 export const SHOVEL_COST_PER_DIG = 1;
 export const COINS_PER_DIG = 40;
 export const COINS_TO_PASS_LEVEL = 800;
+export const MAX_DAILY_STAMINA = 5;
 
 export const LEVELS = [
   { name: "埃及金字塔", theme: "desert", bg: "#87CEEB", ground: "#E6C288", text: "#000" },

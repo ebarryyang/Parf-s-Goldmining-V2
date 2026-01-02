@@ -2,7 +2,7 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { X, Hammer, Volume2, VolumeX, Star, Zap, ArrowUp } from 'lucide-react';
 import { UserStats, GameProgress, Pet } from '../types';
-import { LEVELS, COINS_TO_PASS_LEVEL, MAMMALS, POP_CULTURE, TREASURES, COINS_PER_DIG } from '../constants';
+import { LEVELS, COINS_TO_PASS_LEVEL, MAMMALS, POP_CULTURE, TREASURES, COINS_PER_DIG, MAX_DAILY_STAMINA } from '../constants';
 
 interface MiningGameProps {
   stats: UserStats;
@@ -62,6 +62,7 @@ const MiningGame: React.FC<MiningGameProps> = ({
   const [rewardItem, setRewardItem] = useState<RewardInfo | null>(null);
   const [localCoins, setLocalCoins] = useState(progress.levelCoinsFound); // Current level accumulator
   const [localShovels, setLocalShovels] = useState(stats.shovels);
+  const [localStamina, setLocalStamina] = useState(stats.stamina || 0); // Local Stamina State
   const [isMuted, setIsMuted] = useState(false);
   
   // Track pressed state for visual feedback on virtual buttons
@@ -245,8 +246,15 @@ const MiningGame: React.FC<MiningGameProps> = ({
   // Start Dig Animation
   const startDig = () => {
       if (playerRef.current.action === 'DIG' || gameState === 'REWARD' || gameState === 'MSG') return;
+      
       if (!playerRef.current.grounded) {
           showMessage("只能在地面挖掘!", '#FF8888');
+          return;
+      }
+
+      // Check Stamina
+      if (localStamina <= 0) {
+          showMessage("今日体力已耗尽!", '#FF4500');
           return;
       }
       
@@ -257,10 +265,14 @@ const MiningGame: React.FC<MiningGameProps> = ({
 
   // Resolve Dig Result (Called after animation)
   const resolveDig = () => {
+      // Consume 1 Stamina per attempt
+      const newStamina = Math.max(0, localStamina - 1);
+      setLocalStamina(newStamina);
+
       const rand = Math.random() * 100;
       let resultType: 'GOLD' | 'ITEM' | 'PET' | 'NOTHING' = 'NOTHING';
       
-      // Increased Gold Probability for faster progression
+      // Probability Distribution
       if (rand < 40) resultType = 'GOLD';
       else if (rand < 60) resultType = 'ITEM';
       else if (rand < 70) resultType = 'PET';
@@ -278,7 +290,9 @@ const MiningGame: React.FC<MiningGameProps> = ({
            spawnParticles(p.x + (p.facingRight ? 32 : 0), p.y + 32, 12, ['#FF69B4', '#00BFFF', '#7FFF00']);
       }
 
+      // Logic Handling based on result
       if (resultType === 'GOLD') {
+          // Requirement: Stamina AND Shovel needed for Gold
           if (localShovels > 0) {
               const newShovels = localShovels - 1;
               const newCoins = localCoins + COINS_PER_DIG; 
@@ -286,7 +300,7 @@ const MiningGame: React.FC<MiningGameProps> = ({
               setLocalCoins(newCoins);
               newTotalCoins += COINS_PER_DIG;
               
-              onUpdateStats({ shovels: newShovels, coins: newTotalCoins });
+              onUpdateStats({ shovels: newShovels, coins: newTotalCoins, stamina: newStamina });
               
               // Only update progress if we haven't passed level yet
               if (newCoins < COINS_TO_PASS_LEVEL) {
@@ -303,10 +317,14 @@ const MiningGame: React.FC<MiningGameProps> = ({
               }
 
           } else {
-              showMessage("挖掘金币需要铲子!", '#FFD700');
+              // Found gold but no shovel
+              onUpdateStats({ ...stats, stamina: newStamina }); // Still sync stamina
+              showMessage("发现金币但没有铲子!", '#FFD700');
           }
       } else if (resultType === 'PET' || resultType === 'ITEM') {
-          // Pet/Item do NOT require shovel
+          // Pet/Item only require stamina (which is already checked and consumed)
+          onUpdateStats({ ...stats, stamina: newStamina });
+
           let list: any[] = [];
           let category: any = 'MAMMAL';
           
@@ -340,6 +358,8 @@ const MiningGame: React.FC<MiningGameProps> = ({
           onFindPet(newPet);
           showReward({ name: item.name, icon: item.icon, rarity, type: resultType });
       } else {
+          // Nothing found
+          onUpdateStats({ ...stats, stamina: newStamina });
           showMessage("这里空空如也...", '#AAAAAA');
       }
 
@@ -522,7 +542,7 @@ const MiningGame: React.FC<MiningGameProps> = ({
         window.removeEventListener('keydown', handleDigInput);
         cancelAnimationFrame(gameLoopRef.current);
     };
-  }, [gameState, progress.currentLevelIndex]); // Re-bind if level changes
+  }, [gameState, progress.currentLevelIndex, localStamina]); // Added localStamina to dependency to ensure check works
 
   // Robust Input Handlers for Touch/Mouse
   const handleInputStart = (code: string) => {
@@ -1052,7 +1072,13 @@ const MiningGame: React.FC<MiningGameProps> = ({
                         <Hammer size={14} className="text-mario-yellow" />
                         <span>x {localShovels}</span>
                     </div>
-                    <div className="text-white font-pixel text-[10px] md:text-xs opacity-80">
+                    {/* Stamina Display */}
+                    <div className="flex items-center gap-2 text-white font-pixel text-xs md:text-sm drop-shadow-md mt-1">
+                        <Zap size={14} className="text-blue-400 fill-blue-400" />
+                        <span>x {localStamina}</span>
+                    </div>
+
+                    <div className="text-white font-pixel text-[10px] md:text-xs opacity-80 mt-1">
                         Lvl {progress.currentLevelIndex + 1}
                     </div>
                  </div>

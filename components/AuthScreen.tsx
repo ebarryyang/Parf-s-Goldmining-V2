@@ -92,7 +92,24 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
         return;
     }
 
-    // 2. Normal User Check
+    // 2. Yangben Check (Hardcoded as requested)
+    if (loginUser.trim() === 'yangben' && loginPass.trim() === 'yang128739') {
+        const user: UserProfile = {
+            username: 'yangben',
+            childName: 'Yang Ben',
+            phoneNumber: '13800000000',
+            createdAt: Date.now(),
+            hasValidCode: true,
+            isAdmin: false,
+            avatar: DEFAULT_AVATAR
+        };
+        // Store auth for future persistence if needed, though this bypasses strict register
+        localStorage.setItem(`parfai_auth_yangben`, 'yang128739');
+        onLogin(user);
+        return;
+    }
+
+    // 3. Normal User Check
     const storedPass = localStorage.getItem(`parfai_auth_${loginUser.trim()}`);
     
     if (storedPass === loginPass.trim()) {
