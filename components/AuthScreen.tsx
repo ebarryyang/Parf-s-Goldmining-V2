@@ -1,6 +1,6 @@
 
 import React, { useState, useRef } from 'react';
-import { BookOpen, User, Lock, Upload, Key, Smile, Image as ImageIcon, Phone } from 'lucide-react';
+import { BookOpen, User, Lock, Upload, Key, Smile, Image as ImageIcon } from 'lucide-react';
 import Button from './Button';
 import { UserProfile } from '../types';
 import { VALID_INVITE_CODE } from '../constants';
@@ -19,7 +19,6 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
   const [childName, setChildName] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
   const [birthYear, setBirthYear] = useState('');
   const [birthMonth, setBirthMonth] = useState('');
   const [gender, setGender] = useState<'BOY' | 'GIRL' | 'SECRET'>('SECRET');
@@ -49,15 +48,16 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
     e.preventDefault();
     setError('');
 
-    if (!childName.trim() || !username.trim() || !password.trim() || !phoneNumber.trim()) {
-        setError("请填写所有必填项 (姓名, 手机号, 用户名, 密码)");
+    // Removed phone number and child name from required check
+    if (!username.trim() || !password.trim()) {
+        setError("请填写所有必填项 (用户名, 密码)");
         return;
     }
 
     const newUser: UserProfile = {
         username: username.trim(),
-        childName: childName.trim(),
-        phoneNumber: phoneNumber.trim(),
+        childName: childName.trim() || '快乐兔', // Default to Happy Rabbit
+        // phoneNumber removed
         birthYear: birthYear ? parseInt(birthYear) : undefined,
         birthMonth: birthMonth ? parseInt(birthMonth) : undefined,
         gender,
@@ -248,13 +248,13 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
 
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="block font-bold text-xs text-gray-500 mb-1 ml-1">孩子姓名 *</label>
+                            <label className="block font-bold text-xs text-gray-500 mb-1 ml-1">孩子昵称 (选填)</label>
                             <input 
                                 type="text"
                                 value={childName}
                                 onChange={e => setChildName(e.target.value)}
                                 className="w-full p-3 bg-gray-50 border-2 border-gray-300 rounded-xl focus:border-mario-green outline-none font-bold text-sm"
-                                placeholder="宝宝名字"
+                                placeholder="默认为“快乐兔”"
                             />
                         </div>
                          <div>
@@ -268,20 +268,6 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
                                 <option value="GIRL">👧 女生</option>
                                 <option value="SECRET">🤐 保密</option>
                             </select>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label className="block font-bold text-xs text-gray-500 mb-1 ml-1">手机号码 *</label>
-                        <div className="relative">
-                            <Phone className="absolute left-3 top-3 text-gray-400" size={16} />
-                            <input 
-                                type="tel"
-                                value={phoneNumber}
-                                onChange={e => setPhoneNumber(e.target.value)}
-                                className="w-full pl-9 p-3 bg-gray-50 border-2 border-gray-300 rounded-xl focus:border-mario-green outline-none font-bold text-sm"
-                                placeholder="请输入手机号"
-                            />
                         </div>
                     </div>
 
