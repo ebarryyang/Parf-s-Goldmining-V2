@@ -1,6 +1,6 @@
 
 import React, { useRef } from 'react';
-import { X, Camera, CheckCircle, Lock, Trash2, Image as ImageIcon, Calendar, Star } from 'lucide-react';
+import { X, Camera, CheckCircle, Lock, Trash2, Image as ImageIcon, Calendar, Star, BookOpen } from 'lucide-react';
 import { Book, Chapter } from '../types';
 import Button from './Button';
 import StarRating from './StarRating';
@@ -13,6 +13,32 @@ interface ChapterModalProps {
   onRateBook: (bookId: string, rating: number) => void;
 }
 
+// 8-bit Red Flower SVG Base64
+const FLOWER_SVG = `
+<svg width="100%" height="100%" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges">
+  <!-- Stem -->
+  <rect x="11" y="14" width="2" height="10" fill="#2E8B57" />
+  <rect x="9" y="16" width="2" height="2" fill="#32CD32" />
+  <rect x="13" y="18" width="2" height="2" fill="#32CD32" />
+  
+  <!-- Center -->
+  <rect x="10" y="9" width="4" height="4" fill="#FFD700" />
+  
+  <!-- Petals -->
+  <rect x="10" y="5" width="4" height="4" fill="#E60012" /> <!-- Top -->
+  <rect x="10" y="13" width="4" height="4" fill="#E60012" /> <!-- Bottom -->
+  <rect x="6" y="9" width="4" height="4" fill="#E60012" /> <!-- Left -->
+  <rect x="14" y="9" width="4" height="4" fill="#E60012" /> <!-- Right -->
+  
+  <!-- Corners -->
+  <rect x="7" y="6" width="2" height="2" fill="#FF6B6B" />
+  <rect x="15" y="6" width="2" height="2" fill="#FF6B6B" />
+  <rect x="7" y="14" width="2" height="2" fill="#FF6B6B" />
+  <rect x="15" y="14" width="2" height="2" fill="#FF6B6B" />
+</svg>
+`;
+const FLOWER_IMAGE = `data:image/svg+xml;base64,${btoa(FLOWER_SVG)}`;
+
 const ChapterModal: React.FC<ChapterModalProps> = ({ book, onClose, onUploadProof, onDeleteBook, onRateBook }) => {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
@@ -20,6 +46,7 @@ const ChapterModal: React.FC<ChapterModalProps> = ({ book, onClose, onUploadProo
   const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Disabled functionality, but keeping code to avoid breaking references if needed later
     const file = e.target.files?.[0];
     if (file && selectedChapterId) {
       const reader = new FileReader();
@@ -32,14 +59,8 @@ const ChapterModal: React.FC<ChapterModalProps> = ({ book, onClose, onUploadProo
     e.target.value = '';
   };
 
-  const triggerCamera = (chapterId: string) => {
-    setSelectedChapterId(chapterId);
-    cameraInputRef.current?.click();
-  };
-
-  const triggerGallery = (chapterId: string) => {
-    setSelectedChapterId(chapterId);
-    galleryInputRef.current?.click();
+  const handleMarkAsRead = (chapterId: string) => {
+      onUploadProof(book.id, chapterId, FLOWER_IMAGE);
   };
 
   const handleDelete = () => {
@@ -155,8 +176,8 @@ const ChapterModal: React.FC<ChapterModalProps> = ({ book, onClose, onUploadProo
               </div>
 
               {chapter.isCompleted && chapter.proofImage ? (
-                <div className="w-full h-40 rounded-xl overflow-hidden border-4 border-white shadow-md bg-white">
-                  <img src={chapter.proofImage} alt="Proof" className="w-full h-full object-cover" />
+                <div className="w-full h-40 rounded-xl overflow-hidden border-4 border-white shadow-md bg-white p-4">
+                  <img src={chapter.proofImage} alt="Proof" className="w-full h-full object-contain pixel-art-scaling" />
                 </div>
               ) : (
                 <div className="w-full h-40 rounded-xl border-4 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 bg-white/50">
@@ -166,28 +187,38 @@ const ChapterModal: React.FC<ChapterModalProps> = ({ book, onClose, onUploadProo
               )}
 
               {!chapter.isCompleted && (
-                <div className="mt-auto w-full flex gap-3">
+                <div className="mt-auto w-full flex flex-col gap-3">
+                    {/* Read Button */}
                     <button
-                      onClick={() => triggerCamera(chapter.id)}
-                      className="flex-1 bg-mario-blue text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 hover:brightness-110 active:scale-95 transition-all shadow-pixel border-2 border-black/10 font-round"
+                      onClick={() => handleMarkAsRead(chapter.id)}
+                      className="w-full bg-mario-blue text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 hover:brightness-110 active:scale-95 transition-all shadow-pixel border-2 border-black/10 font-round"
                     >
-                      <Camera size={20} />
-                      <span>拍照</span>
+                      <BookOpen size={20} />
+                      <span>已阅读</span>
                     </button>
-                    <button
-                      onClick={() => triggerGallery(chapter.id)}
-                      className="flex-1 bg-mario-yellow text-mario-brown font-bold py-3 rounded-xl flex items-center justify-center gap-2 hover:brightness-110 active:scale-95 transition-all shadow-pixel border-2 border-black/10 font-round"
-                    >
-                      <ImageIcon size={20} />
-                      <span>相册</span>
-                    </button>
+
+                    {/* Disabled Camera/Gallery Buttons */}
+                    <div className="flex gap-3 opacity-40 grayscale pointer-events-none select-none">
+                        <button
+                          className="flex-1 bg-gray-300 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 shadow-none border-2 border-gray-400 font-round"
+                        >
+                          <Camera size={20} />
+                          <span>拍照</span>
+                        </button>
+                        <button
+                          className="flex-1 bg-gray-300 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 shadow-none border-2 border-gray-400 font-round"
+                        >
+                          <ImageIcon size={20} />
+                          <span>相册</span>
+                        </button>
+                    </div>
                 </div>
               )}
             </div>
           ))}
         </div>
 
-        {/* Hidden Inputs */}
+        {/* Hidden Inputs (Kept for compatibility, though unused now) */}
         <input
           type="file"
           accept="image/*"
